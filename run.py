@@ -4,6 +4,9 @@ from model.Hier_BiLSTM_CRF import *
 from prepare_data import *
 from train import *
 
+
+import warnings
+warnings.filterwarnings("ignore", category=Warning)
 def main():
     parser = argparse.ArgumentParser()
 
@@ -13,7 +16,7 @@ def main():
     parser.add_argument('--cat_path', default = 'categories.txt', type = str, help = 'Path to file containing category details')     
     parser.add_argument('--dataset_size', default = 50, type = int, help = 'Total no. of docs')
     parser.add_argument('--num_folds', default = 5, type = int, help = 'No. of folds to divide the dataset into')
-    parser.add_argument('--device', default = 'cuda', type = str, help = 'cuda / cpu')
+    parser.add_argument('--device', default = 'cpu', type = str, help = 'cuda / cpu')
     
     parser.add_argument('--batch_size', default = 32, type = int)
     parser.add_argument('--print_every', default = 10, type = int, help = 'Epoch interval after which validation macro f1 and loss will be printed')

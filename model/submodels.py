@@ -3,6 +3,8 @@ from torch import nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_sequence, pack_padded_sequence, pad_packed_sequence
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 SEED = 42
 
 torch.manual_seed(SEED)
@@ -12,7 +14,7 @@ torch.cuda.manual_seed(SEED)
     Sentences are represented as a sequence of word tokens. These sequences are converted into fixed-length sentence embeddings by passing them through a Bi-LSTM. The hidden embedding at the last word is considered to represent the entire sentence.   
 '''
 class LSTM_Sentence_Encoder(nn.Module):
-    def __init__(self, vocab_size, emb_dim, hidden_dim, drop = 0.5, device = 'cuda'):
+    def __init__(self, vocab_size, emb_dim, hidden_dim, drop = 0.5, device = 'cpu'):
         super().__init__()
         
         self.hidden_dim = hidden_dim
@@ -53,7 +55,7 @@ class LSTM_Sentence_Encoder(nn.Module):
     A Bi-LSTM is used to generate feature vectors for each sentence from the sentence embeddings. The feature vectors are actually context-aware sentence embeddings. These are then fed to a feed-forward network to obtain emission scores for each class at each sentence.
 '''
 class LSTM_Emitter(nn.Module):
-    def __init__(self, n_tags, emb_dim, hidden_dim, drop = 0.5, device = 'cuda'):
+    def __init__(self, n_tags, emb_dim, hidden_dim, drop = 0.5, device = 'cpu'):
         super().__init__()
         
         self.hidden_dim = hidden_dim
@@ -142,7 +144,8 @@ class CRF(nn.Module):
     
     def _compute_scores(self, emissions, tags, mask):
         batch_size, seq_len = tags.shape
-        scores = torch.zeros(batch_size).cuda()
+        # scores = torch.zeros(batch_size).cuda()
+        scores = torch.zeros(batch_size).to(device)
         
         # save first and last tags for later
         first_tags = tags[:, 0]
