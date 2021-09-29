@@ -16,9 +16,9 @@ def main():
     parser.add_argument('--save_path', default = 'infer/predictions.txt', type = str, help = 'Path to file where predictions will be saved')
     parser.add_argument('--word2idx_path', default = 'infer/word2idx.json', type = str, help = 'Path to word2idx dict created during training model')
     parser.add_argument('--tag2idx_path', default = 'infer/tag2idx.json', type = str, help = 'Path to tag2idx dict created during training model')
-    parser.add_argument('--emb_dim', default = 200, type = int, help = 'Sentence embedding dimension')
+    parser.add_argument('--emb_dim', default = 786, type = int, help = 'Sentence embedding dimension')
     parser.add_argument('--word_emb_dim', default = 100, type = int, help = 'Word embedding dimension, applicable only if pretrained = False')
-    parser.add_argument('--device', default = 'cuda', type = str, help = 'cuda / cpu')
+    parser.add_argument('--device', default = 'cpu', type = str, help = 'cuda / cpu')
     
     args = parser.parse_args()
 

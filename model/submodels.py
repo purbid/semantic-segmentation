@@ -57,9 +57,8 @@ class LSTM_Sentence_Encoder(nn.Module):
 class LSTM_Emitter(nn.Module):
     def __init__(self, n_tags, emb_dim, hidden_dim, drop = 0.5, device = 'cpu'):
         super().__init__()
-        
         self.hidden_dim = hidden_dim
-        
+        # print(n_tags)
         self.lstm = nn.LSTM(emb_dim, hidden_dim // 2, bidirectional = True, batch_first = True)
         self.dropout = nn.Dropout(drop)
         self.hidden2tag = nn.Linear(hidden_dim, n_tags)
@@ -79,7 +78,8 @@ class LSTM_Emitter(nn.Module):
         ## tensor[batch_size, max_seq_len, emb_dim] --> tensor[batch_size, max_seq_len, hidden_dim]
         x, self.hidden = self.lstm(sequences, self.hidden)
         x = self.dropout(x)
-        
+        # print(x.shape)
+
         # generate emission scores for each class at each sentence
         # tensor[batch_size, max_seq_len, hidden_dim] --> tensor[batch_size, max_seq_len, n_tags]
         x = self.hidden2tag(x)
