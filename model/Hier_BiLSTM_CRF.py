@@ -10,9 +10,9 @@ from model.submodels import *
     Emission scores are fed to the CRF to generate optimal tag sequence.
 '''
 class Hier_LSTM_CRF_Classifier(nn.Module):
-    def __init__(self, n_tags, sent_emb_dim, sos_tag_idx, eos_tag_idx, pad_tag_idx, vocab_size = 0, word_emb_dim = 0, pad_word_idx = 0, pretrained = False, device = 'cuda'):
+    def __init__(self, n_tags, sent_emb_dim, sos_tag_idx, eos_tag_idx, pad_tag_idx, vocab_size = 0, word_emb_dim = 0, pad_word_idx = 0, pretrained = False, device = 'cpu'):
         super().__init__()
-        
+
         self.emb_dim = sent_emb_dim
         self.pretrained = pretrained
         self.device = device
@@ -20,6 +20,8 @@ class Hier_LSTM_CRF_Classifier(nn.Module):
         self.pad_word_idx = pad_word_idx
         
         # sentence encoder is not required for pretrained embeddings
+
+
         self.sent_encoder = LSTM_Sentence_Encoder(vocab_size, word_emb_dim, sent_emb_dim).to(self.device) if not self.pretrained else None
             
         self.emitter = LSTM_Emitter(n_tags, sent_emb_dim, sent_emb_dim).to(self.device)
@@ -46,16 +48,22 @@ class Hier_LSTM_CRF_Classifier(nn.Module):
                 tensor_x.append(sents)
             
         else: ## x: list[batch_size, sents_per_doc, sent_emb_dim]
+
             tensor_x = [torch.tensor(doc, dtype = torch.float, requires_grad = True) for doc in x]
         
         ## list[batch_size, sents_per_doc, sent_emb_dim] --> tensor[batch_size, max_seq_len, sent_emb_dim]
         tensor_x = nn.utils.rnn.pad_sequence(tensor_x, batch_first = True).to(self.device)        
-        
+        # print("max_seq_len is :"+str(max_seq_len))
+        # print("LSTM output is : "+str(tensor_x.shape))
         self.mask = torch.zeros(batch_size, max_seq_len).to(self.device)
         for i, sl in enumerate(seq_lengths):
             self.mask[i, :sl] = 1	
         
         self.emissions = self.emitter(tensor_x)
+
+        # print(self.emissions.shape)
+        # exit()
+        # mask is [32, 658] => batch size into max seq => documents * max number of sentences in any doc
         _, path = self.crf.decode(self.emissions, mask = self.mask)
         return path
     

@@ -1,6 +1,6 @@
 from model.submodels import *
 from torch import nn
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification
 
 
 class Bert_CRF(nn.Module):
@@ -11,8 +11,7 @@ class Bert_CRF(nn.Module):
 
         ############ from bert model ##########
         self.tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-
-        self.bert = AutoModel.from_pretrained('bert-base-uncased')
+        self.bert = AutoModelForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=7)
 
 
         self.dropout = nn.Dropout(0.1)
@@ -38,38 +37,42 @@ class Bert_CRF(nn.Module):
 
     def tokenise_input(self, batch_input):
 
-
-
         return
 
 
-    def forward(self, x):
+    def forward(self, input_ids, attention_mask=None, labels=None):
 
         #################### bert model ###########################
         '''
 
-        :param x: [batch_size, sentence_len, embeddingd_size]
+        :param x: [batch_size, sentence_len, embedding_size]
         '''
 
-        _, cls_hs = self.bert(1, attention_mask=0, return_dict=False)
-        op1 = self.fc1(cls_hs)
-        op1 = self.relu(op1)
-        op1 = self.dropout(op1)
-        # output layer
-        op1 = self.fc2(op1)
-        # apply softmax activation
-        bert_final_op = self.softmax(op1)
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, labels=labels, return_dict=True)
+        # print(outputs["logits"].shape)
+        # return outputs
+        # op1 = self.fc1(cls_hs)
+        # op1 = self.relu(op1)
+        # op1 = self.dropout(op1)
+        # # output layer
+        # op1 = self.fc2(op1)
+        # # apply softmax activation
+        # bert_final_op = self.softmax(op1)
 
 
         ######################## HIERAR MODEL ###########################
 
-        batch_size = len(x)
-        seq_lengths = [len(doc) for doc in x]
-        max_seq_len = max(seq_lengths)
+        # batch_size = len(x)
+        # seq_lengths = [len(doc) for doc in x]
+        # max_seq_len = max(seq_lengths)
         '''
         crf decoder accepts bert final output and attention mask
         '''
-        _, path = self.crf.decode(bert_final_op, mask=input_attention_mask)
+        ### masks will be batch size * max_Seq => 1, our_batch_size
+
+        # 32*658*10 => 32documents*658sentencesmax*eachsentence200embedding
+        # attention should be 32documents*ones upto number of sentences.
+        _, path = self.crf.decode(outputs["logits"].unsqueeze(0), mask=attention_mask)
         return path
 
     def _loss(self, y):

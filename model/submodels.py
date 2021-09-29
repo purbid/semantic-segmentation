@@ -138,8 +138,13 @@ class CRF(nn.Module):
     def decode(self, emissions, mask = None):      
         if mask is None:
             mask = torch.ones(emissions.shape[:2])
-            
+        '''
+        emissions => document_size*numberofsentences*tags
+        
+        '''
         scores, sequences = self._viterbi_decode(emissions, mask)
+        print(len(sequences), len(scores), scores)
+        exit()
         return scores, sequences
     
     def _compute_scores(self, emissions, tags, mask):
@@ -213,7 +218,11 @@ class CRF(nn.Module):
     # return a list of optimal tag sequence for each example in the batch
     def _viterbi_decode(self, emissions, mask):
         batch_size, seq_len, n_tags = emissions.shape
-        
+
+        ##### 32, 658, 10
+        #### 1, 8, 10
+
+
         # in the first iteration, SOS will have all the scores and then, the max
         alphas = self.transitions[self.SOS_TAG_IDX, :].unsqueeze(0) + emissions[:, 0]
         
@@ -287,3 +296,5 @@ class CRF(nn.Module):
             best_path.insert(0, best_tag)
 
         return best_path
+
+

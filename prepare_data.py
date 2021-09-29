@@ -54,34 +54,39 @@ def prepare_data(idx_order, args):
     # map the special symbols first
     word2idx['<pad>'], word2idx['<unk>'] = 0, 1
     tag2idx['<pad>'], tag2idx['<start>'], tag2idx['<end>'] = 0, 1, 2
-
     # iterate over documents
     for doc in idx_order:
         doc_x, doc_y = [], [] 
 
         with open(args.data_path + doc + '.txt') as fp:
-            
             # iterate over sentences
             for sent in fp:
                 try:
                 	sent_x, sent_y = sent.strip().split('\t')
-                except ValueError:
+                except Exception as e:
+                    # print(e)
                 	continue
 
-                # cleanse text, map words and tags
-                if not args.pretrained:
-                    sent_x = sent_x.strip().lower().translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation)))
-                    sent_x = list(map(lambda x: word2idx[x], sent_x.split()))
-                else:
-                    sent_x = list(map(float, sent_x.strip().split()[:args.emb_dim]))
-                sent_y = tag2idx[sent_y.strip()]
-
-                if sent_x != []:
+                if args.use_bert:
                     doc_x.append(sent_x)
                     doc_y.append(sent_y)
+
+                else:
+                    # cleanse text, map words and tags
+                    if not args.pretrained:
+                        sent_x = sent_x.strip().lower().translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation)))
+                        sent_x = list(map(lambda x: word2idx[x], sent_x.split()))
+                    else:
+                        sent_x = list(map(float, sent_x.strip().split()[:args.emb_dim]))
+                    sent_y = tag2idx[sent_y.strip()]
+
+                    if sent_x != []:
+                        doc_x.append(sent_x)
+                        doc_y.append(sent_y)
         
         x.append(doc_x)
         y.append(doc_y)
+
 
     return x, y, word2idx, tag2idx
 

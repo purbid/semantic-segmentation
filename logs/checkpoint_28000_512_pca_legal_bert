@@ -1,0 +1,133 @@
+word embedding size is : 512
+
+Preparing data ... Done
+Vocabulary size: 2
+#Tags: 10
+
+Cross-validation
+
+
+Initializing model ... Done
+
+Evaluating on fold 0 ...
+  EPOCH     Tr_LOSS   Tr_F1    Val_LOSS  Val_F1
+-----------------------------------------------------------
+     10    1604.586   0.793    2190.471   0.525
+     20     272.470   0.974    2762.503   0.532
+Dumping model and data ... Done
+Time taken: 38 secs
+                         precision    recall  f1-score   support
+
+                  Facts      0.636     0.690     0.662       487
+               Argument      0.468     0.432     0.449       185
+  Ratio of the decision      0.556     0.611     0.582       658
+                Statute      0.745     0.857     0.797       119
+              Precedent      0.657     0.358     0.463       246
+Ruling by Present Court      0.609     0.583     0.596        48
+  Ruling by Lower Court      0.291     0.307     0.299        75
+
+               accuracy                          0.583      1818
+              macro avg      0.566     0.548     0.550      1818
+           weighted avg      0.585     0.583     0.577      1818
+
+
+Initializing model ... Done
+
+Evaluating on fold 1 ...
+  EPOCH     Tr_LOSS   Tr_F1    Val_LOSS  Val_F1
+-----------------------------------------------------------
+     10    1854.545   0.808    1422.060   0.564
+     20     385.881   0.964    1966.317   0.562
+Dumping model and data ... Done
+Time taken: 39 secs
+                         precision    recall  f1-score   support
+
+                  Facts      0.777     0.696     0.734       480
+               Argument      0.541     0.675     0.601       117
+  Ratio of the decision      0.549     0.616     0.580       477
+                Statute      0.759     0.867     0.810        98
+              Precedent      0.645     0.548     0.593       259
+Ruling by Present Court      0.722     0.557     0.629        70
+  Ruling by Lower Court      0.381     0.444     0.410        18
+
+               accuracy                          0.646      1519
+              macro avg      0.625     0.629     0.622      1519
+           weighted avg      0.656     0.646     0.648      1519
+
+
+Initializing model ... Done
+
+Evaluating on fold 2 ...
+  EPOCH     Tr_LOSS   Tr_F1    Val_LOSS  Val_F1
+-----------------------------------------------------------
+     10    1397.387   0.826    2255.187   0.524
+     20     254.285   0.973    3285.547   0.528
+Dumping model and data ... Done
+Time taken: 35 secs
+                         precision    recall  f1-score   support
+
+                  Facts      0.819     0.750     0.783       544
+               Argument      0.536     0.371     0.439       202
+  Ratio of the decision      0.699     0.659     0.678       949
+                Statute      0.720     0.573     0.638       117
+              Precedent      0.339     0.790     0.474       186
+Ruling by Present Court      0.771     0.643     0.701        42
+  Ruling by Lower Court      0.323     0.118     0.172        85
+
+               accuracy                          0.640      2125
+              macro avg      0.601     0.558     0.555      2125
+           weighted avg      0.670     0.640     0.642      2125
+
+
+Initializing model ... Done
+
+Evaluating on fold 3 ...
+  EPOCH     Tr_LOSS   Tr_F1    Val_LOSS  Val_F1
+-----------------------------------------------------------
+     10    1744.546   0.764    2058.982   0.596
+     20     339.450   0.961    2630.835   0.618
+     30      66.151   0.997    3366.286   0.628
+     40      20.645   1.000    3647.176   0.619
+     50      12.759   1.000    3725.016   0.617
+     60       8.505   1.000    3905.501   0.606
+     70       6.776   1.000    3893.527   0.610
+     80       5.254   1.000    3912.296   0.619
+Dumping model and data ... Done
+Time taken: 130 secs
+                         precision    recall  f1-score   support
+
+                  Facts      0.599     0.915     0.724       294
+               Argument      0.796     0.640     0.710       189
+  Ratio of the decision      0.596     0.776     0.674       736
+                Statute      0.864     0.709     0.779       251
+              Precedent      0.791     0.389     0.522       475
+Ruling by Present Court      0.814     0.814     0.814        43
+  Ruling by Lower Court      0.444     0.148     0.222        81
+
+               accuracy                          0.663      2069
+              macro avg      0.701     0.627     0.635      2069
+           weighted avg      0.691     0.663     0.647      2069
+
+
+Initializing model ... Done
+
+Evaluating on fold 4 ...
+  EPOCH     Tr_LOSS   Tr_F1    Val_LOSS  Val_F1
+-----------------------------------------------------------
+     10    1907.393   0.786    1730.054   0.609
+     20     369.129   0.963    2118.871   0.586
+Dumping model and data ... Done
+Time taken: 40 secs
+                         precision    recall  f1-score   support
+
+                  Facts      0.667     0.628     0.647       414
+               Argument      0.372     0.678     0.480       152
+  Ratio of the decision      0.698     0.592     0.641       804
+                Statute      0.830     0.639     0.722        61
+              Precedent      0.677     0.755     0.714       302
+Ruling by Present Court      0.763     0.763     0.763        59
+  Ruling by Lower Court      0.298     0.298     0.298        57
+
+               accuracy                          0.632      1849
+              macro avg      0.615     0.622     0.609      1849
+           weighted avg      0.655     0.632     0.637      1849
