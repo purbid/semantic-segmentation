@@ -1,0 +1,15 @@
+It was contended by Mr. Chari that the expression "former part" would apply to the first sub- division of chapter XIX which deals with the form and content of the charges and the powers of the court with regard to the absence of charge and alteration of charge
+to do
+
+
+>Run legal bert
+>get embeddings from legal bert and try with current model
+>run legalbert + CRF
+>
+
+
+
+options for getting bert embedings:
+1. Train bert from scratch with embedding of 200 instead of 786.
+2. Add extra layer in bert forward, that takes 786 and returns 200. Then train the model(using trainer class).
+
