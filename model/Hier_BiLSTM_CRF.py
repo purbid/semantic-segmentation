@@ -23,8 +23,35 @@ class Hier_LSTM_CRF_Classifier(nn.Module):
 
 
         self.sent_encoder = LSTM_Sentence_Encoder(vocab_size, word_emb_dim, sent_emb_dim).to(self.device) if not self.pretrained else None
-            
-        self.emitter = LSTM_Emitter(n_tags, sent_emb_dim, sent_emb_dim).to(self.device)
+
+        encoder_embedding_size = 200
+        decoder_embedding_size = 200
+        hidden_size = 1024
+        input_size_encoder = 100
+        input_size_decoder = 100
+        output_size = 10
+        num_layers = 1
+        enc_dropout = 0.0
+        dec_dropout = 0.0
+
+
+
+        encoder_net = Encoder(
+            input_size_encoder, encoder_embedding_size, hidden_size, num_layers, enc_dropout
+        ).to(device)
+
+        decoder_net = Decoder(
+            input_size_decoder,
+            decoder_embedding_size,
+            hidden_size,
+            output_size,
+            num_layers,
+            dec_dropout,
+        ).to(device)
+
+        self.emitter = Seq2Seq(encoder_net, decoder_net).to(device)
+
+        # self.emitter = LSTM_Emitter(n_tags, sent_emb_dim, sent_emb_dim).to(self.device)
         self.crf = CRF(n_tags, sos_tag_idx, eos_tag_idx, pad_tag_idx).to(self.device)
         
     
@@ -58,9 +85,10 @@ class Hier_LSTM_CRF_Classifier(nn.Module):
         self.mask = torch.zeros(batch_size, max_seq_len).to(self.device)
         for i, sl in enumerate(seq_lengths):
             self.mask[i, :sl] = 1	
-        
-        self.emissions = self.emitter(tensor_x)
 
+
+        self.emissions = self.emitter(tensor_x)
+        exit()
         # print(self.emissions.shape)
         # exit()
         # mask is [32, 658] => batch size into max seq => documents * max number of sentences in any doc
