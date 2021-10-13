@@ -1,9 +1,12 @@
 import argparse
-
+import sys
 from model.Hier_BiLSTM_CRF import *
-from model.Bert_CRF import *
+from model.Lstm_attn_CRF import *
+from model.bert_CRF import *
 from prepare_data import *
 from train import *
+
+
 
 
 import warnings
@@ -19,6 +22,7 @@ def main():
     parser.add_argument('--num_folds', default = 5, type = int, help = 'No. of folds to divide the dataset into')
     parser.add_argument('--device', default = 'cpu', type = str, help = 'cuda / cpu')
     parser.add_argument('--use_bert', default = False, type = bool)
+    parser.add_argument('--use_attention', default=False, type = bool)
     parser.add_argument('--batch_size', default = 32, type = int)
     parser.add_argument('--print_every', default = 10, type = int, help = 'Epoch interval after which validation macro f1 and loss will be printed')
     parser.add_argument('--lr', default = 0.01, type = float, help = 'Learning Rate')
@@ -50,8 +54,14 @@ def main():
         print('\nCross-validation\n')
         for f in range(args.num_folds):
 
-            print('\nInitializing model ...', end = ' ')  
-            model = Hier_LSTM_CRF_Classifier(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'], tag2idx['<pad>'], vocab_size = len(word2idx), word_emb_dim = args.word_emb_dim, pretrained = args.pretrained, device = args.device).to(args.device)
+            print('\nInitializing model ...', end = ' ')
+            if args.use_attention == True:
+                model = Attn_BiLSTM_CRF(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'],
+                                        tag2idx['<pad>'], vocab_size=len(word2idx), word_emb_dim=args.word_emb_dim,
+                                        pretrained=args.pretrained, device=args.device).to(args.device)
+
+            else:
+                model = Hier_LSTM_CRF_Classifier(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'], tag2idx['<pad>'], vocab_size = len(word2idx), word_emb_dim = args.word_emb_dim, pretrained = args.pretrained, device = args.device).to(args.device)
             print('Done')
             
             print('\nEvaluating on fold', f, '...')        
@@ -59,8 +69,14 @@ def main():
 
     elif args.use_bert == False:
 
-        print('\nInitializing model ...', end = ' ')   
-        model = Hier_LSTM_CRF_Classifier(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'], tag2idx['<pad>'], vocab_size = len(word2idx), word_emb_dim = args.word_emb_dim, pretrained = args.pretrained, device = args.device).to(args.device)
+        print('\nInitializing model ...', end = ' ')
+        if args.use_attention == True:
+            model = Attn_BiLSTM_CRF(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'],
+                                             tag2idx['<pad>'], vocab_size=len(word2idx), word_emb_dim=args.word_emb_dim,
+                                             pretrained=args.pretrained, device=args.device).to(args.device)
+        else:
+            model = Hier_LSTM_CRF_Classifier(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'], tag2idx['<pad>'], vocab_size = len(word2idx), word_emb_dim = args.word_emb_dim, pretrained = args.pretrained, device = args.device).to(args.device)
+
         print('Done')
 
         print('\nEvaluating on fold', args.val_fold, '...')        
@@ -71,6 +87,7 @@ def main():
         model = Bert_CRF(len(tag2idx), args.emb_dim, tag2idx['<start>'], tag2idx['<end>'], tag2idx['<pad>'], vocab_size = len(word2idx), device = args.device).to(args.device)
         print("initialised bert model")
         learn_bert(model, x, y, tag2idx, args)
+
 
 
 

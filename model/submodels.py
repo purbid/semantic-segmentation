@@ -1,5 +1,9 @@
+import time
+
 import torch
 import random
+import itertools
+import numpy as np
 from torch import nn
 import torch.nn.functional as F
 from torchtext.legacy.data import Field, BucketIterator
@@ -64,14 +68,47 @@ class LSTM_Emitter(nn.Module):
         # print(n_tags)
         self.lstm = nn.LSTM(emb_dim, hidden_dim // 2, bidirectional = True, batch_first = True)
         self.dropout = nn.Dropout(drop)
+        self.fc_hidden = nn.Linear(hidden_dim, hidden_dim)
         self.hidden2tag = nn.Linear(hidden_dim, n_tags)
         self.hidden = None
         self.device = device
         
     def init_hidden(self, batch_size):
         return (torch.randn(2, batch_size, self.hidden_dim // 2).to(self.device), torch.randn(2, batch_size, self.hidden_dim // 2).to(self.device))
+
+    def attention_net(self, lstm_output, final_state):
+        """
+        Now we will incorporate Attention mechanism in our LSTM model. In this new model, we will use attention to compute soft alignment score corresponding
+        between each of the hidden_state and the last hidden_state of the LSTM. We will be using torch.bmm for the batch matrix multiplication.
+
+        Arguments
+        ---------
+
+        lstm_output : Final output of the LSTM which contains hidden layer outputs for each sequence.
+        final_state : Final time-step hidden state (h_n) of the LSTM
+
+        ---------
+
+        Returns : It performs attention mechanism by first computing weights for each of the sequence present in lstm_output and and then finally computing the
+                  new hidden state.
+
+        Tensor Size :
+                    hidden.size() = (batch_size, hidden_size)
+                    attn_weights.size() = (batch_size, num_seq)
+                    soft_attn_weights.size() = (batch_size, num_seq)
+                    new_hidden_state.size() = (batch_size, hidden_size)
+
+        """
+        print("here for attention calculation")
+        hidden = final_state.squeeze(0)
+        # print("lstm output and hidden shapes before attention")
+        attn_weights = torch.bmm(lstm_output, hidden.unsqueeze(2)).squeeze(2)
+        soft_attn_weights = F.softmax(attn_weights, 1)
+        new_hidden_state = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
+
+        return new_hidden_state
     
-    def forward(self, sequences):
+    def forward(self, sequences, target = [], teacher_force = 0):
         ## sequences: tensor[batch_size, max_seq_len, emb_dim]
         
         # initialize hidden state
@@ -79,9 +116,18 @@ class LSTM_Emitter(nn.Module):
         
         # generate context-aware sentence embeddings (feature vectors)
         ## tensor[batch_size, max_seq_len, emb_dim] --> tensor[batch_size, max_seq_len, hidden_dim]
-        x, self.hidden = self.lstm(sequences, self.hidden)
+        x, (self.hidden_final, _) = self.lstm(sequences, self.hidden)
+
+        # ### since it is bidirectional, we make first dimension as 1 by concatenating both
+        # self.hidden_final = torch.cat((self.hidden_final[0:1], self.hidden_final[1:2]), dim=2)
+        #
+        # attn_output = self.attention_net(x, self.hidden_final)
+        #
+        # print(attn_output.shape)
+        # exit()
+
         x = self.dropout(x)
-        # print(x.shape)
+
 
         # generate emission scores for each class at each sentence
         # tensor[batch_size, max_seq_len, hidden_dim] --> tensor[batch_size, max_seq_len, n_tags]
@@ -146,8 +192,8 @@ class CRF(nn.Module):
         
         '''
         scores, sequences = self._viterbi_decode(emissions, mask)
-        print(len(sequences), len(scores), scores)
-        exit()
+        # print(len(sequences), len(scores), scores)
+
         return scores, sequences
     
     def _compute_scores(self, emissions, tags, mask):
@@ -308,16 +354,15 @@ class Encoder(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.embedding = nn.Embedding(input_size, embedding_size)
+
         self.rnn = nn.LSTM(embedding_size, hidden_size, num_layers, bidirectional=True)
 
-        self.fc_hidden = nn.Linear(hidden_size * 2, hidden_size)
-        self.fc_cell = nn.Linear(hidden_size * 2, hidden_size)
+        self.fc_hidden = nn.Linear(hidden_size*2, hidden_size)
+        self.fc_cell = nn.Linear(hidden_size*2, hidden_size)
         self.dropout = nn.Dropout(p)
 
     def forward(self, x):
         # x: (seq_length, N) where N is batch size
-
 
         #### embedding layer is not required since we use pretrained embeddings
 
@@ -359,8 +404,11 @@ class Decoder(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x, encoder_states, hidden, cell):
+
         x = x.unsqueeze(0)
         # x: (1, N) where N is the batch size
+
+        #### decoder output embeddings must be learnt.
 
         embedding = self.dropout(self.embedding(x))
         # embedding shape: (1, N, embedding_size)
@@ -398,24 +446,49 @@ class Seq2Seq(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, input_tensor, teacher_force_ratio=0.5):
+    def forward(self, input_tensor, target,  teacher_force_ratio=0.5):
+
+        '''
+        To apply autoencoder for this task, the decoder attention should work across input (encoder) attention states.
+        To simplify things lets consider barch size as 1(one document). Seq_len N now becomes the number of sentences in
+        that document. For seq2seq translation task (from dimension 200 for each input, a sentence, to a dimension 10,
+        sample space for our rehtorics), it happens over timesteps 1 -> N. Hence, previous "hidden states" will correspond to 
+        previous sentences. 
+        Traditionally for machine translation, input is one sentence <sos> word1 word2 word3... <eos>.
+        Then for decoder, at timestep 0, the inputs are <sos> and final encoder states. This gives output the first word
+        (in machine translation).
+        In our case, input <sos> doesn't matter. But for decoder, sos matters, because that is timestep 0 input, along with 
+        context vector (final hidden state of encoder). We dont have an Embedding for SOS. We will let the decoder learn it by adding an
+        embedding layer.
+        '''
         batch_size = input_tensor.shape[0]
         target_len = input_tensor.shape[1]
+        target_tensor = []
+        if teacher_force_ratio != 0:
+            target_list = target.tolist()
+            target_list = list(zip(*itertools.zip_longest(*target_list, fillvalue=0)))
+            target_tensor = torch.as_tensor(target_list).permute(1,0)
+
+
         target_vocab_size = 10
-        print("forward of seq2seq")
+
         outputs = torch.zeros(target_len, batch_size, target_vocab_size).to(device)
         encoder_states, hidden, cell = self.encoder(input_tensor)
 
         # First input will be <SOS> token
-        x = target[0]
+        x = torch.ones(batch_size).to(torch.int)
 
-        for t in range(1, target_len):
+        for t in range(0, target_len):
+
             # At every time step use encoder_states and update hidden, cell
             output, hidden, cell = self.decoder(x, encoder_states, hidden, cell)
-
+            '''
+            this gets stored in output starting at index 1, 
+            for index 0, the tensor is zero. 
+            '''
             # Store prediction for current time step
-            outputs[t] = output
 
+            outputs[t] = output
             # Get the best word the Decoder predicted (index in the vocabulary)
             best_guess = output.argmax(1)
 
@@ -425,39 +498,42 @@ class Seq2Seq(nn.Module):
             # similar inputs at training and testing time, if teacher forcing is 1
             # then inputs at test time might be completely different than what the
             # network is used to. This was a long comment.
-            x = target[t] if random.random() < teacher_force_ratio else best_guess
-
+            x = target_tensor[t] if random.random() < teacher_force_ratio else best_guess
+        outputs = outputs.permute(1,0,2)
         return outputs
 
+
+
+
 # Training hyperparameters
-num_epochs = 100
-learning_rate = 3e-4
-batch_size = 32
-
-encoder_embedding_size = 200
-decoder_embedding_size = 200
-hidden_size = 1024
-input_size_encoder = 100
-input_size_decoder = 100
-output_size = 10
-num_layers = 1
-enc_dropout = 0.0
-dec_dropout = 0.0
-# Tensorboard to get nice loss plot
-writer = SummaryWriter(f"runs/loss_plot")
-step = 0
-
-encoder_net = Encoder(
-    input_size_encoder, encoder_embedding_size, hidden_size, num_layers, enc_dropout
-).to(device)
-
-decoder_net = Decoder(
-    input_size_decoder,
-    decoder_embedding_size,
-    hidden_size,
-    output_size,
-    num_layers,
-    dec_dropout,
-).to(device)
-
-model = Seq2Seq(encoder_net, decoder_net).to(device)
+# num_epochs = 100
+# learning_rate = 3e-4
+# batch_size = 32
+#
+# encoder_embedding_size = 200
+# decoder_embedding_size = 200
+# hidden_size = 1024
+# input_size_encoder = 100
+# input_size_decoder = 100
+# output_size = 10
+# num_layers = 1
+# enc_dropout = 0.0
+# dec_dropout = 0.0
+# # Tensorboard to get nice loss plot
+# writer = SummaryWriter(f"runs/loss_plot")
+# step = 0
+#
+# encoder_net = Encoder(
+#     input_size_encoder, encoder_embedding_size, hidden_size, num_layers, enc_dropout
+# ).to(device)
+#
+# decoder_net = Decoder(
+#     input_size_decoder,
+#     decoder_embedding_size,
+#     hidden_size,
+#     output_size,
+#     num_layers,
+#     dec_dropout,
+# ).to(device)
+#
+# model = Seq2Seq(encoder_net, decoder_net).to(device)

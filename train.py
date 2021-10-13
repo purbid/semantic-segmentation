@@ -67,16 +67,17 @@ def train_step(model, opt, x, y, batch_size):
     y_pred = [] # predictions
     y_gold = [] # gold standard
     idx = [] # example index
+
     
     for i, (batch_idx, batch_x, batch_y) in enumerate(batchify(x, y, batch_size)):
 
-
         ##batch_x : [batch_size, sentence_len, embeddingd_size] (number of documents, each sentence, sentence embedding)
         ##batch_y : [bach_size, sentence_len] (number of documents, label for each sentence)
+        #### passing labels for teacher forcing
 
-        pred = model(batch_x)
+
+        pred = model(batch_x, batch_y)
         loss = model._loss(batch_y)
-
         opt.zero_grad()
         loss.backward()
         opt.step()
@@ -86,7 +87,7 @@ def train_step(model, opt, x, y, batch_size):
         y_pred.extend(pred)
         y_gold.extend(batch_y)
         idx.extend(batch_idx)
-        
+
     assert len(sum(y, [])) == len(sum(y_pred, [])), "Mismatch in predicted"
     return total_loss / (i + 1), idx, y_gold, y_pred
 
@@ -105,7 +106,7 @@ def val_step(model, x, y, batch_size):
     idx = [] # example index
     
     for i, (batch_idx, batch_x, batch_y) in enumerate(batchify(x, y, batch_size)):
-        pred = model(batch_x)
+        pred = model(batch_x, batch_y)
         loss = model._loss(batch_y)
                
         total_loss += loss.item()
@@ -115,7 +116,6 @@ def val_step(model, x, y, batch_size):
         idx.extend(batch_idx)
         
     assert len(sum(y, [])) == len(sum(y_pred, [])), "Mismatch in predicted"
-    
     return total_loss / (i + 1), idx, y_gold, y_pred
 
 '''
@@ -184,8 +184,12 @@ def learn(model, x, y, tag2idx, val_fold, args):
         train_f1 = f1_score(sum(train_gold, []), sum(train_pred, []), average = 'macro')
         val_f1 = f1_score(sum(val_gold, []), sum(val_pred, []), average = 'macro')
 
+        if train_f1>0.996 and epoch > 110:
+            break
+
         if epoch % args.print_every == 0:
             print("{0:7d}  {1:10.3f}  {2:6.3f}  {3:10.3f}  {4:6.3f}".format(epoch, train_loss, train_f1, val_loss, val_f1))
+
 
         if val_f1 > best_val_f1:
             best_val_f1 = val_f1
